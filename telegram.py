@@ -14,6 +14,8 @@ TELEGRAM_API_ID = os.getenv('TELEGRAM_API_ID')
 TELEGRAM_API_HASH = os.getenv('TELEGRAM_API_HASH')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
+os.makedirs(TELEGRAM_DIR, exist_ok=True)
+
 USER_SESSION_DIR = os.path.join(TELEGRAM_DIR, 'user_session')
 BOT_SESSION_DIR = os.path.join(TELEGRAM_DIR, 'bot_session')
 

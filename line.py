@@ -31,6 +31,8 @@ LINE_DIR = os.path.join(DATA_DIR, os.getenv('LINE_DIR'))
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 
+os.makedirs(LINE_DIR, exist_ok=True)
+
 application = Flask(__name__)
 application.config['CORS_HEADERS'] = 'Content-Type'
 application.config['CORS_RESOURCES'] = {r'/api/*': {'origins': '*'}}
@@ -126,7 +128,6 @@ def handle_content_message(event):
         line_bot_blob_api = MessagingApiBlob(api_client)
         content = line_bot_blob_api.get_message_content(event.message.id)
         temp_name = f'{uuid.uuid4().hex}.{ext}'
-        os.makedirs(LINE_DIR, exist_ok=True)
         with open(os.path.join(LINE_DIR, temp_name), 'wb') as f:
             f.write(content)
         line_api.reply_message(
