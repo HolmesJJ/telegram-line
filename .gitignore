@@ -1,0 +1,16 @@
+.DS_Store
+*.pth
+*.pyc
+*.pyo
+*.log
+*.tmp
+.idea/
+.ipynb_checkpoints
+.pytest_cache
+__pycache__/
+cache/
+dist/
+build/
+
+# data
+data/

@@ -1,0 +1,4 @@
+Flask
+telethon
+line-bot-sdk
+python-dotenv
