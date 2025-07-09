@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Message Filter</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    select, button { margin: 10px 5px; padding: 5px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    img, video, audio { max-width: 200px; max-height: 150px; }
+  </style>
+</head>
+<body>
+  <h2>Message Filter Interface</h2>
+
+  <label for="botSelect">Select Bot ID:</label>
+  <select id="botSelect"></select>
+
+  <label for="sourceSelect">Select Source:</label>
+  <select id="sourceSelect"></select>
+
+  <button onclick="filterMessages()">Filter</button>
+
+  <table id="messageTable">
+    <thead>
+      <tr>
+        <th>Content</th>
+        <th>User</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+  window.onload = () => {
+    fetchBots();
+    fetchSources();
+  };
+
+  function fetchBots() {
+    fetch('/api/bots')
+      .then(res => res.json())
+      .then(data => {
+        const botSelect = document.getElementById('botSelect');
+        botSelect.innerHTML = '';
+        data.forEach(botId => {
+          const option = document.createElement('option');
+          option.value = botId;
+          option.textContent = botId;
+          botSelect.appendChild(option);
+        });
+      });
+  }
+
+  function fetchSources() {
+    fetch('/api/sources')
+      .then(res => res.json())
+      .then(data => {
+        const sourceSelect = document.getElementById('sourceSelect');
+        sourceSelect.innerHTML = '';
+        data.forEach(src => {
+          const option = document.createElement('option');
+          option.value = `${src.type}|${src.id}`;
+          option.textContent = `${src.type} - ${src.name}`;
+          sourceSelect.appendChild(option);
+        });
+      });
+  }
+
+  function filterMessages() {
+    const botId = document.getElementById('botSelect').value;
+    const [sourceType, sourceId] = document.getElementById('sourceSelect').value.split('|');
+
+    const params = new URLSearchParams({ bot_id: botId });
+    if (sourceType === 'user') {
+      params.append('source_type', 'user');
+      params.append('user_id', sourceId);
+    } else {
+      params.append('source_type', sourceType);
+      params.append('source_id', sourceId);
+    }
+
+    fetch(`/api/messages?${params.toString()}`)
+      .then(res => res.json())
+      .then(data => {
+        console.log(data);
+        const tbody = document.getElementById('messageTable').querySelector('tbody');
+        tbody.innerHTML = '';
+
+        data.forEach(m => {
+          const row = document.createElement('tr');
+
+          // Content
+          const BASE_URL = `${window.location.origin}/data/line/`;
+          const contentCell = document.createElement('td');
+          if (m.type === 'text') {
+            contentCell.textContent = m.content;
+          } else if (m.type === 'jpg') {
+            contentCell.innerHTML = `<img src="${BASE_URL}${m.content}" alt="image" />`;
+          } else if (m.type === 'mp4') {
+            contentCell.innerHTML = `<video controls src="${BASE_URL}${m.content}"></video>`;
+          } else if (m.type === 'm4a') {
+            contentCell.innerHTML = `<audio controls src="${BASE_URL}${m.content}"></audio>`;
+          } else {
+            contentCell.textContent = '[Unknown Type]';
+          }
+          row.appendChild(contentCell);
+
+          // User
+          const userCell = document.createElement('td');
+          userCell.textContent = m.user_name;
+          row.appendChild(userCell);
+
+          // Timestamp
+          const timeCell = document.createElement('td');
+          timeCell.textContent = m.timestamp;
+          row.appendChild(timeCell);
+
+          tbody.appendChild(row);
+        });
+      });
+  }
+  </script>
+</body>
+</html>
