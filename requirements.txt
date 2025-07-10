@@ -1,4 +1,5 @@
 Flask
+openai
 pymongo
 telethon
 line-bot-sdk

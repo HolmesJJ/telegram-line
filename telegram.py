@@ -48,6 +48,7 @@ user_client = TelegramClient(USER_SESSION_DIR, int(TELEGRAM_API_ID), TELEGRAM_AP
 bot_client = TelegramClient(BOT_SESSION_DIR, int(TELEGRAM_API_ID), TELEGRAM_API_HASH)
 
 bot_id = None
+telegram_loop = None
 
 
 @user_client.on(events.NewMessage())
@@ -78,14 +79,17 @@ async def _common_handler(event, client):
         upsert_channel(sender)
     chat = await event.get_chat()
     source_id = None
+    tag = None
     if isinstance(chat, tl.User):
         print(f'[_common_handler] chat (user): {chat}')
         upsert_user(chat)
         target_id = chat.id
+        tag = 'private'
     elif isinstance(chat, tl.Chat):
         print(f'[_common_handler] chat (chat): {chat}')
         upsert_chat(chat)
         source_id = chat.id
+        tag = 'group'
         participants = await client.get_participants(chat)
         for p in participants:
             print(f"- {p.id}: {p.first_name} {p.last_name or ''} {p.username or ''} {p.phone or ''}")
@@ -94,17 +98,11 @@ async def _common_handler(event, client):
         print(f'[_common_handler] chat (channel): {chat}')
         upsert_channel(chat)
         source_id = chat.id
+        tag = 'channel'
         participants = await client.get_participants(chat)
         for p in participants:
             print(f"- {p.id}: {p.first_name} {p.last_name or ''} {p.username or ''}  {p.phone or ''}")
             upsert_user(p)
-    tag = None
-    if event.is_private:
-        tag = 'private'
-    elif event.is_group:
-        tag = 'group'
-    elif event.is_channel:
-        tag = 'channel'
     print(f'[_common_handler] tag: {tag}')
     message = event.message
     print(f'[_common_handler] message: {message}')
@@ -205,11 +203,12 @@ def insert_message(message_type, message_content, source_type, source_id, user_i
 
 
 async def bootstrap():
-    global bot_id
+    global bot_id, telegram_loop
     await user_client.start()
     await bot_client.start(bot_token=TELEGRAM_BOT_TOKEN)
     print('>>> Start Listening ...')
     bot_id = (await bot_client.get_me()).id
+    telegram_loop = asyncio.get_running_loop()
     print(f'[bootstrap] Bot started. bot_id={bot_id}')
     await asyncio.gather(
         user_client.run_until_disconnected(),
@@ -297,6 +296,23 @@ def api_messages():
             'timestamp': row.get('created_at').strftime('%Y-%m-%d %H:%M:%S')
         })
     return jsonify(messages)
+
+
+@application.route('/api/send_message', methods=['POST'])
+def send_message():
+    data = request.json
+    source_type = data.get('source_type')
+    target_id = data.get('target_id')
+    message = data.get('message')
+    if not all([source_type, target_id, message]):
+        return jsonify({'error': 'Missing required parameters'}), 400
+    try:
+        print('[send_message] telegram_loop ->', telegram_loop)
+        coroutine = bot_client.send_message(int(target_id), message)
+        asyncio.run_coroutine_threadsafe(coroutine, telegram_loop)
+        return jsonify({'status': 'Message sent'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
