@@ -63,7 +63,7 @@ def test():
     return 'OK'
 
 
-@application.route('/data/line/<path:filename>')
+@application.route('/data/line/<path:filename>', methods=['GET'])
 def serve_file(filename):
     try:
         return send_from_directory(LINE_DIR, filename, as_attachment=False)
@@ -71,7 +71,7 @@ def serve_file(filename):
         abort(404, description='File not found')
 
 
-@application.route('/line')
+@application.route('/line', methods=['GET'])
 def serve_html():
     return send_from_directory(STATIC_DIR, 'line.html')
 
@@ -187,7 +187,7 @@ def get_messages():
         messages.append({
             'type': row.get('message_type'),
             'content': row.get('message_content'),
-            'user_id': user_id,
+            'user_id': row.get('user_id'),
             'user_name': user.get('display_name') if user else user_id,
             'timestamp': row.get('created_at').strftime('%Y-%m-%d %H:%M:%S')
         })
@@ -311,15 +311,16 @@ def handle_content_message(event):
 
 
 def upsert_user(user_id, display_name):
+    timestamp = datetime.now()
     user_collection.update_one(
         {'user_id': user_id},
         {
             '$set': {
                 'display_name': display_name,
-                'updated_at': datetime.now()
+                'updated_at': timestamp
             },
             '$setOnInsert': {
-                'created_at': datetime.now()
+                'created_at': timestamp
             }
         },
         upsert=True
@@ -327,15 +328,16 @@ def upsert_user(user_id, display_name):
 
 
 def upsert_group(group_id, group_name):
+    timestamp = datetime.now()
     group_collection.update_one(
         {'group_id': group_id},
         {
             '$set': {
                 'group_name': group_name,
-                'updated_at': datetime.now()
+                'updated_at': timestamp
             },
             '$setOnInsert': {
-                'created_at': datetime.now()
+                'created_at': timestamp
             }
         },
         upsert=True
@@ -343,15 +345,16 @@ def upsert_group(group_id, group_name):
 
 
 def upsert_room(room_id, room_name):
+    timestamp = datetime.now()
     room_collection.update_one(
         {'room_id': room_id},
         {
             '$set': {
                 'room_name': room_name,
-                'updated_at': datetime.now()
+                'updated_at': timestamp
             },
             '$setOnInsert': {
-                'created_at': datetime.now()
+                'created_at': timestamp
             }
         },
         upsert=True
